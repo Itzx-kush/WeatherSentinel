@@ -1,0 +1,6 @@
+pydantic>=2.8,<3
+pandas>=2.2,<3
+pyarrow>=17,<21
+pytest>=8.3,<9
+pytest-asyncio>=0.24,<1
+ruff>=0.7,<1
