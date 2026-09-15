@@ -1,0 +1,5 @@
+dataset_id: imd-demo-synthetic-v1
+source_type: synthetic
+input: data/examples/aws_synthetic_normal.csv
+replay_speed: 60
+note: Explicitly synthetic normal-behavior sample; no ground-truth faults.
