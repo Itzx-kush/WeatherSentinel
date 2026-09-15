@@ -72,7 +72,10 @@ class QualityValidator:
                             code="communication_gap",
                             level=FlagLevel.WARNING,
                             field="timestamp",
-                            message=f"Approximately {max(0, round(elapsed / expected) - 1)} interval(s) absent",
+                            message=(
+                                f"Approximately {max(0, round(elapsed / expected) - 1)} "
+                                "interval(s) absent"
+                            ),
                             observed=elapsed,
                             expected=f"approximately {expected} seconds",
                         )
@@ -124,7 +127,9 @@ class QualityValidator:
                 rk = (row.station_id, sensor)
                 old = repeated.get(rk)
                 count = (
-                    old[1] + 1 if old and abs(value - old[0]) <= self.config.freeze_tolerance else 1
+                    old[1] + 1
+                    if old and abs(value - old[0]) <= self.config.freeze_tolerance
+                    else 1
                 )
                 repeated[rk] = (value, count)
                 if count >= self.config.freeze_consecutive:
