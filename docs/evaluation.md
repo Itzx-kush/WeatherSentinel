@@ -1,5 +1,3 @@
-# Evaluation status
+# Evaluation
 
-Part 1 tests data contracts and deterministic transformations. It does not report anomaly precision, recall, F1, accuracy, or detection latency because no anomaly model and no labelled benchmark exist yet.
-
-Part 5 will introduce deterministic fault injection, immutable ground truth, event-level matching, per-fault metrics, latency measurement, and reproducibility metadata.
+Fault injection deep-copies observations and records provenance. Supported faults: spike, freeze, drift, step change, bias, dropout, communication gap. Metrics include TP/FP/TN/FN, precision, recall, F1, specificity, false-positive/negative rates, diagnosis confusion matrix, and detection delay. Synthetic results are not claimed as IMD or production performance.

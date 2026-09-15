@@ -1,5 +1,5 @@
-# Detection methodology status
+# Parts 2-3 methodology
 
-Multi-layer anomaly detection is **not implemented in Part 1**. The foundation supplies canonical records, structured quality evidence, rolling baselines, and temporal/multivariate features for Part 2.
+WeatherSentinel emits structured evidence from quality rules, past-only rolling standardized deviation, stateful temporal patterns, diagonal multivariate distance, and an explicitly fitted deterministic isolation forest. ML fitting records dataset ID, preprocessing, feature version, seed, threshold, rows, and configuration; inference never silently fits.
 
-Part 2 will add detector contracts and compare a justified subset of rule, robust statistical, temporal, and classical ML methods. Selection will be based on injected-ground-truth evaluation, false alarms, latency, stability, interpretability, and computational cost—not model count.
+Fusion uses configurable family weights. Anomaly score, evidence-strength confidence, and severity are separate. Status is NORMAL, UNCERTAIN, or ANOMALOUS. Confidence is detector coverage/agreement, not probability. All histories at time t contain only observations at or before t.
