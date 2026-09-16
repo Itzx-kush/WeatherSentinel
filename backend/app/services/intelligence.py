@@ -26,7 +26,7 @@ class IntelligenceService:
         self.health = HealthTracker()
 
     def analyze(self, features: list[FeatureRecord], *, fit_ml: bool = True, dataset_id: str = "runtime") -> list[IntelligenceRecord]:
-        if fit_ml:
+        if fit_ml and not self.ml.trees:
             trainable = [r for r in features if all(getattr(r.observation, s) is not None for s in ("temperature_c", "pressure_hpa", "relative_humidity_pct"))]
             if len(trainable) >= 8:
                 self.ml.fit(trainable, dataset_id)
@@ -39,6 +39,10 @@ class IntelligenceService:
             out.append(IntelligenceRecord(feature_record=r, anomaly=anomaly, diagnosis=self.diagnoser.diagnose(anomaly), health=self.health.update(anomaly)))
         return out
 
-    def run(self, ingestion: IngestionResult) -> IntelligenceResult:
+    def train(self, features: list[FeatureRecord], dataset_id: str) -> None:
+        trainable = [r for r in features if all(getattr(r.observation, s) is not None for s in ("temperature_c", "pressure_hpa", "relative_humidity_pct"))]
+        self.ml.fit(trainable, dataset_id)
+
+    def run(self, ingestion: IngestionResult, *, fit_ml: bool = True) -> IntelligenceResult:
         features = FoundationPipeline().run(ingestion).records
-        return IntelligenceResult(dataset_id=ingestion.provenance.dataset_id, records=self.analyze(features, dataset_id=ingestion.provenance.dataset_id))
+        return IntelligenceResult(dataset_id=ingestion.provenance.dataset_id, records=self.analyze(features, fit_ml=fit_ml, dataset_id=ingestion.provenance.dataset_id))
