@@ -6,6 +6,7 @@ from app.health.tracker import HealthSnapshot
 from app.realtime.bus import EventBus
 from app.schemas.models import AWSObservation, DatasetProvenance, IngestionResult, SourceType, StationMetadata
 from app.services.intelligence import IntelligenceService
+from app.services.pipeline import FoundationPipeline
 from app.spatial.engine import SpatialAnalyzer
 
 class RuntimeStore:
@@ -29,6 +30,17 @@ class RuntimeStore:
     def _ingestion(self, observations: list[AWSObservation], dataset_id: str = "runtime") -> IngestionResult:
         p = DatasetProvenance(dataset_id=dataset_id, source_filename="api", source_type=SourceType.REAL, record_count=len(observations), processing_version="part6-1.0.0")
         return IngestionResult(observations=observations, errors=[], provenance=p)
+
+    def train_models(self, observations: list[AWSObservation], dataset_id: str) -> dict:
+        ingestion = self._ingestion(observations, dataset_id)
+        features = FoundationPipeline().run(ingestion).records
+        self.intelligence.train(features, dataset_id)
+        return {
+            "dataset_id": dataset_id,
+            "records": len(features),
+            "isolation_forest": self.intelligence.ml.metadata.model_dump(mode="json") if self.intelligence.ml.metadata else None,
+            "temporal_model": self.intelligence.temporal_model.metadata.model_dump(mode="json") if self.intelligence.temporal_model.metadata else None,
+        }
 
     async def process(self, observations: list[AWSObservation], dataset_id: str = "runtime", truth_labels: list[bool] | None = None) -> list[dict]:
         if not observations:
