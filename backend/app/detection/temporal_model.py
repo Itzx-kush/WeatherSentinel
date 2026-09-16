@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
 
 import numpy as np
 
@@ -82,7 +81,7 @@ class TemporalReconstructionDetector:
                 windows.append(window.reshape(-1))
         return np.asarray(windows, dtype=float) if windows else np.empty((0, self.window_size * len(SENSORS)))
 
-    def fit(self, records: list[FeatureRecord], dataset_id: str) -> "TemporalReconstructionDetector":
+    def fit(self, records: list[FeatureRecord], dataset_id: str) -> TemporalReconstructionDetector:
         windows = self._windows(records)
         if len(windows) < 8:
             raise ValueError("at least 8 complete temporal windows are required")
