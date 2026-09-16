@@ -71,6 +71,13 @@ async def process(body: ProcessRequest, request: Request):
 async def process_dataset(body: ProcessRequest, request: Request):
     return {"dataset_id": body.dataset_id, "results": await runtime(request).process(body.observations, body.dataset_id)}
 
+@router.post("/api/v1/models/train")
+async def train_models(body: ProcessRequest, request: Request):
+    try:
+        return runtime(request).train_models(body.observations, body.dataset_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
 @router.post("/api/v1/replay")
 async def replay(body: ProcessRequest, request: Request):
     replay_id = str(uuid4())
@@ -159,11 +166,29 @@ async def neighbors(station_id: str, request: Request):
 @router.get("/api/v1/models")
 async def models(request: Request):
     rt = runtime(request)
-    return {"models": [{"name": "IsolationForest", "version": "1.0.0", "integrated": any(type(d).__name__ == "IsolationForestDetector" for d in rt.intelligence.detectors)}, {"name": "rule/statistical/temporal/multivariate", "version": "1.0.0", "integrated": True}]}
+    return {
+        "models": [
+            {
+                "name": "IsolationForest",
+                "version": "1.0.0",
+                "integrated": any(type(d).__name__ == "IsolationForestDetector" for d in rt.intelligence.detectors),
+                "trained": rt.intelligence.ml.metadata is not None,
+                "metadata": rt.intelligence.ml.metadata.model_dump(mode="json") if rt.intelligence.ml.metadata else None,
+            },
+            {
+                "name": "TemporalPCAAutoencoder",
+                "version": "1.0.0",
+                "integrated": True,
+                "trained": rt.intelligence.temporal_model.metadata is not None,
+                "metadata": rt.intelligence.temporal_model.metadata.model_dump(mode="json") if rt.intelligence.temporal_model.metadata else None,
+            },
+            {"name": "rule/statistical/temporal/multivariate", "version": "1.0.0", "integrated": True},
+        ]
+    }
 
 @router.get("/api/v1/system/config")
 async def config(request: Request):
-    return {"version": request.app.state.version, "features": {"spatial": True, "realtime": True, "correction": True, "fault_injection": True, "replay": True}}
+    return {"version": request.app.state.version, "features": {"spatial": True, "realtime": True, "correction": True, "fault_injection": True, "replay": True, "learned_temporal_model": True}}
 
 @router.websocket("/api/v1/ws/events")
 async def websocket_events(websocket: WebSocket):
