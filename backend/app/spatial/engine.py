@@ -1,11 +1,8 @@
 from __future__ import annotations
 
 import math
-from datetime import UTC, datetime
 from pydantic import BaseModel, Field
 from app.schemas.models import AWSObservation, StationMetadata
-
-SENSORS = ("temperature_c", "pressure_hpa", "relative_humidity_pct")
 
 class SpatialEvidence(BaseModel):
     station_id: str
@@ -32,8 +29,8 @@ class SpatialAnalyzer:
         p1, p2 = math.radians(a.latitude), math.radians(b.latitude)
         dp = math.radians(b.latitude - a.latitude)
         dl = math.radians(b.longitude - a.longitude)
-        h = math.sin(dp/2)**2 + math.cos(p1)*math.cos(p2)*math.sin(dl/2)**2
-        return 2*r*math.asin(math.sqrt(h))
+        h = math.sin(dp / 2)**2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2)**2
+        return 2 * r * math.asin(math.sqrt(h))
 
     def neighbors(self, station_id: str) -> list[str]:
         anchor = self.stations.get(station_id)
@@ -43,16 +40,16 @@ class SpatialAnalyzer:
         for sid, station in self.stations.items():
             if sid == station_id:
                 continue
-            d = self.distance_km(anchor, station)
-            if d is not None and d <= self.radius_km:
+            distance = self.distance_km(anchor, station)
+            if distance is not None and distance <= self.radius_km:
                 out.append(sid)
         return out
 
     def compare(self, observations: list[AWSObservation], observation: AWSObservation) -> list[SpatialEvidence]:
         peer_ids = set(self.neighbors(observation.station_id))
-        peers = [r for r in observations if r.station_id in peer_ids and abs((r.timestamp-observation.timestamp).total_seconds()) <= 900]
+        peers = [r for r in observations if r.station_id in peer_ids and abs((r.timestamp - observation.timestamp).total_seconds()) <= 900]
         result = []
-        for sensor in SENSORS:
+        for sensor in ("temperature_c", "pressure_hpa", "relative_humidity_pct"):
             value = getattr(observation, sensor)
             values = [getattr(r, sensor) for r in peers if getattr(r, sensor) is not None]
             if value is None or not values:
