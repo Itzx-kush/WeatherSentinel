@@ -23,8 +23,7 @@ async def status(request: Request):
 
 @router.post("/api/v1/stations/register")
 async def register_stations(body: StationRegistrationRequest, request: Request):
-    rt = runtime(request)
-    rt.register_stations(body.stations)
+    runtime(request).register_stations(body.stations)
     return {"registered": len(body.stations), "stations": [s.station_id for s in body.stations]}
 
 @router.get("/api/v1/stations")
@@ -32,13 +31,6 @@ async def list_stations(request: Request):
     rt = runtime(request)
     ids = set(rt.stations) | {o.station_id for o in rt.observations}
     return {"stations": [rt.station_summary(s) for s in sorted(ids)]}
-
-@router.get("/api/v1/stations/{station_id}")
-async def station(station_id: str, request: Request):
-    rt = runtime(request)
-    if station_id not in rt.stations and not any(o.station_id == station_id for o in rt.observations):
-        raise HTTPException(404, "station not found")
-    return rt.station_summary(station_id)
 
 @router.get("/api/v1/stations/{station_id}/sensors")
 async def sensors(station_id: str, request: Request):
@@ -63,6 +55,13 @@ async def station_health(station_id: str, request: Request):
 @router.get("/api/v1/stations/{station_id}/timeline")
 async def timeline(station_id: str, request: Request):
     return {"station_id": station_id, "events": [e for e in runtime(request).events if e.get("station_id") == station_id]}
+
+@router.get("/api/v1/stations/{station_id}")
+async def station(station_id: str, request: Request):
+    rt = runtime(request)
+    if station_id not in rt.stations and not any(o.station_id == station_id for o in rt.observations):
+        raise HTTPException(404, "station not found")
+    return rt.station_summary(station_id)
 
 @router.post("/api/v1/observations/process")
 async def process(body: ProcessRequest, request: Request):
@@ -95,12 +94,12 @@ async def fault_injection(body: FaultInjectionRequest, request: Request):
         injected = inject(rt.observations, source_dataset_id="runtime", dataset_id=f"fault-{uuid4()}", fault_type=FaultType(body.fault_type), sensor=body.sensor, start=body.start, end=body.end, magnitude=body.magnitude, station_id=body.station_id)
     except (ValueError, KeyError) as exc:
         raise HTTPException(400, str(exc)) from exc
-    results = await rt.process(injected.observations, injected.metadata.dataset_id)
+    results = await rt.process(injected.observations, injected.metadata.dataset_id, truth_labels=injected.labels)
     return {"metadata": injected.metadata.model_dump(mode="json"), "labels": injected.labels, "results": results}
 
 @router.post("/api/v1/evaluation/run")
 async def evaluation_run(request: Request):
-    return {"metrics": runtime(request).metrics(), "evaluated_records": len(runtime(request).anomalies)}
+    return runtime(request).metrics()
 
 @router.get("/api/v1/evaluation/metrics")
 async def evaluation_metrics(request: Request):
@@ -115,8 +114,7 @@ async def anomaly(anomaly_id: str, request: Request):
 
 @router.get("/api/v1/diagnoses/{diagnosis_id}")
 async def diagnosis(diagnosis_id: str, request: Request):
-    rt = runtime(request)
-    item = next((a for a in rt.anomalies if f"{a['station_id']}:{a['timestamp']}" == diagnosis_id), None)
+    item = next((a for a in runtime(request).anomalies if f"{a['station_id']}:{a['timestamp']}" == diagnosis_id), None)
     if not item:
         raise HTTPException(404, "diagnosis not found")
     return item["diagnosis"]
@@ -149,16 +147,14 @@ async def apply_correction(correction_id: str, request: Request):
     await rt.bus.publish({"type": "correction_applied", "correction": applied.model_dump(mode="json")})
     return applied
 
+@router.get("/api/v1/spatial/stations")
+async def spatial_stations(request: Request):
+    return {"stations": [s.model_dump(mode="json") for s in runtime(request).stations.values()]}
+
 @router.get("/api/v1/spatial/{station_id}/neighbors")
 async def neighbors(station_id: str, request: Request):
     rt = runtime(request)
-    analyzer = SpatialAnalyzer(rt.stations)
-    return {"station_id": station_id, "neighbors": analyzer.neighbors(station_id)}
-
-@router.get("/api/v1/spatial/stations")
-async def spatial_stations(request: Request):
-    rt = runtime(request)
-    return {"stations": [s.model_dump(mode="json") for s in rt.stations.values()]}
+    return {"station_id": station_id, "neighbors": SpatialAnalyzer(rt.stations).neighbors(station_id)}
 
 @router.get("/api/v1/models")
 async def models(request: Request):
