@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.services.runtime import RuntimeStore
 
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
